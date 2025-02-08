@@ -9,6 +9,9 @@ export interface Expense {
   vendor: string;
   status: ExpenseStatus;
   rejectionReason?: string;
+  attachments?: string[];
+  description?: string;
+  createdAt: string;
 }
 
 export interface Grievance {
