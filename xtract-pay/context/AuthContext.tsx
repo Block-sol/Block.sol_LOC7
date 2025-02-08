@@ -80,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const router = useRouter();
 
   // Fetch user data from Firestore
@@ -138,20 +139,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
+      setLoading(true);
+      
       const result = await signInWithEmailAndPassword(auth, email, password);
       const userData = await fetchUserData(result.user);
-      console.log('User data:', userData);
+      
       if (userData) {
-        console.log('in iF');
         setUser(userData);
-        console.log('User12344:', user);
-        router.push('/employee-claims');
-        window.location.href = '/employee-claims';
+        // Wait for the state to be updated before navigating
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // Navigate based on role
+        switch (userData.role) {
+          case 'employee':
+            router.replace('/employee-claims');
+            break;
+          case 'manager':
+            router.replace('/dashboard/manager');
+            break;
+          case 'admin':
+            router.replace('/dashboard/admin');
+            break;
+          default:
+            router.replace('/dashboard');
+        }
       }
     } catch (err) {
       console.error('Sign in error:', err);
       setError(err instanceof Error ? err : new Error('Failed to sign in'));
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -226,6 +244,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
   };
+
+  // if (!authInitialized) {
+  //   return <div>Loading...</div>; // Or your loading component
+  // }
 
   const value = {
     user,

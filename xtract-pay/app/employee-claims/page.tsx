@@ -14,13 +14,14 @@ import {
   Upload, Search, MessageCircle, AlertCircle, CheckCircle2, XCircle, 
   Bell, ChevronDown, User, Filter, Download, Trash2 
 } from 'lucide-react';
-import { Expense, ExpenseStatus, Grievance, GrievanceStatus } from '@/types';
+import { Expense, ExpenseStatus, Grievance, GrievanceStatus, BillData, GrievanceData } from '@/types';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
 import { useRBAC } from '@/hooks/useRBAC';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { submitBill, getBillsByEmployeeId, getGrievancesByEmployeeId } from '@/services/firestore';
+import toast from 'react-hot-toast';
 
 
 const ExpensePage: React.FC = () => {
@@ -34,9 +35,78 @@ const ExpensePage: React.FC = () => {
     canDelete: checkAccess('expenses', 'delete'),
   };
 
-
+  //state definitions
   const [activeTab, setActiveTab] = useState('submit');
+  const [grievances, setGrievances] = useState<Grievance[]>([]);
   const [showChatbot, setShowChatbot] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: '',
+    end: ''
+  });
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+
+  // State for new expense submission
+  const [newExpense, setNewExpense] = useState({
+    amount: '',
+    date: '',
+    category: '',
+    vendor: '',
+    description: '',
+    billNumber: '', // Added this field
+    paymentType: '', // Added this field
+    attachments: [] as File[]
+  });
+
+  // State for file upload
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+  const [chatMessages, setChatMessages] = useState([
+    { type: 'bot', content: 'Hi! How can I help you with your expenses today?' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+
+  const fetchExpenses = async () => {
+    try {
+      if (!user?.employeeId) return;
+      
+      const bills = await getBillsByEmployeeId(user.employeeId) as unknown as BillData[];
+      setExpenses(bills.map(bill => ({
+        id: bill.bill_id,
+        date: bill.expense_date.toDate().toISOString(),
+        amount: bill.amount,
+        category: bill.category,
+        vendor: bill.vendor,
+        status: bill.is_manager_approved ? 'approved' : 
+               bill.is_flagged ? 'flagged' : 'pending',
+        createdAt: bill.submission_date.toDate().toISOString()
+      })));
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    }
+  };
+  
+  const fetchGrievances = async () => {
+    try {
+      if (!user?.employeeId) return;
+      
+      const grievances = await getGrievancesByEmployeeId(user.employeeId) as unknown as Grievance[];
+      setGrievances(grievances);
+    } catch (error) {
+      console.error('Error fetching grievances:', error);
+    }
+  };
+  
+  // Add useEffect to fetch data on mount
+  useEffect(() => {
+    if (user?.employeeId) {
+      fetchExpenses();
+      fetchGrievances();
+    }
+  }, [user?.employeeId]); 
+  
 
   // Mock data - replace with actual API calls
   const [expenses, setExpenses] = useState<Expense[]>([
@@ -69,34 +139,7 @@ const ExpensePage: React.FC = () => {
       createdAt: '2024-02-06T09:15:00Z'
     }
   ]);
-
-  // State for filters and search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all');
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: '',
-    end: ''
-  });
-  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
-
-  // State for new expense submission
-  const [newExpense, setNewExpense] = useState({
-    amount: '',
-    date: '',
-    category: '',
-    vendor: '',
-    description: '',
-    attachments: [] as File[]
-  });
-
-  // State for file upload
-  const [dragActive, setDragActive] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-
-  const [chatMessages, setChatMessages] = useState([
-    { type: 'bot', content: 'Hi! How can I help you with your expenses today?' }
-  ]);
-  const [chatInput, setChatInput] = useState('');
+  
 
   // Filter expenses based on search and filters
   const filteredExpenses = expenses.filter(expense => {
@@ -146,30 +189,62 @@ const ExpensePage: React.FC = () => {
   };
 
   // New expense submission handler
-  const handleSubmitExpense = (e: React.FormEvent) => {
+  const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newExpenseEntry: Expense = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: newExpense.date,
-      amount: parseFloat(newExpense.amount),
-      category: newExpense.category,
-      vendor: newExpense.vendor,
-      status: 'pending',
-      description: newExpense.description,
-      createdAt: new Date().toISOString(),
-    };
-
-    setExpenses(prev => [newExpenseEntry, ...prev]);
-    setNewExpense({
-      amount: '',
-      date: '',
-      category: '',
-      vendor: '',
-      description: '',
-      attachments: []
-    });
-    setUploadedFiles([]);
+    try {
+      if (!user?.employeeId) {
+        throw new Error('User not authenticated');
+      }
+  
+      const billData = {
+        amount: parseFloat(newExpense.amount),
+        category: newExpense.category,
+        employee_id: user.employeeId,
+        expense_date: new Date(newExpense.date),
+        payment_type: newExpense.paymentType,
+        vendor: newExpense.vendor
+      };
+  
+      const billId = await submitBill(
+        newExpense.billNumber,
+        newExpense.vendor,
+        billData
+      );
+  
+      // Handle file uploads here if needed
+  
+      // Reset form
+      setNewExpense({
+        amount: '',
+        date: '',
+        category: '',
+        vendor: '',
+        description: '',
+        billNumber: '',
+        paymentType: '',
+        attachments: []
+      });
+      setUploadedFiles([]);
+  
+      // Show success message
+      toast({
+        title: 'Success',
+        description: 'Expense claim submitted successfully',
+        duration: 3000,
+      });
+  
+      // Refresh expenses list
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error submitting expense:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit expense claim',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
   };
 
   // Chatbot handlers

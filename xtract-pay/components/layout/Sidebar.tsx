@@ -4,6 +4,8 @@
 import { Home, Receipt, FileText, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '../ui/button';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarItem {
   title: string;
@@ -14,6 +16,8 @@ interface SidebarItem {
 
 export const Sidebar = () => {
   const pathname = usePathname();
+
+  const { signOut } = useAuth();
   
   const sidebarItems: SidebarItem[] = [
     { title: 'Dashboard', icon: <Home size={20} />, href: '/employee-claims' },
@@ -57,7 +61,7 @@ export const Sidebar = () => {
       <div className="border-t border-gray-200 pt-4 mt-6">
         <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 w-full">
           <LogOut size={20} />
-          <span>Logout</span>
+          <span><Button onClick={signOut}>Logout</Button></span>
         </button>
       </div>
     </div>
