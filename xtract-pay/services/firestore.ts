@@ -11,22 +11,28 @@ import {
 } from 'firebase/firestore';
 import { BillData, GrievanceData } from '@/types';
 
-
-export const submitBill = async (
-  billNumber: string,
-  vendor: string,
-  data: {
-    amount: number;
+interface ReceiptData {
+    amount: string;
     category: string;
     employee_id: string;
     expense_date: Date;
     payment_type: string;
     vendor: string;
+    description?: string;
+    gst_no?: string;
+    bill_items?: Record<string, number>;
+    tax_percent?: number;
   }
+
+
+export const submitBill = async (
+  billNumber: string,
+  vendor: string,
+  data: ReceiptData
 ) => {
   const documentId = `${vendor.toLowerCase().replace(/\s+/g, '-')}-${billNumber}`;
   
-  const billData: BillData = {
+  const billData = {
     bill_id: documentId,
     amount: data.amount,
     category: data.category,
@@ -35,8 +41,12 @@ export const submitBill = async (
     is_flagged: false,
     is_manager_approved: false,
     payment_type: data.payment_type,
-    submission_date: Timestamp.fromDate(new Date()),
-    vendor: data.vendor
+    submission_date: serverTimestamp(),
+    vendor: data.vendor,
+    description: data.description || '',
+    gst_no: data.gst_no || '',
+    bill_items: data.bill_items || {},
+    tax_percent: data.tax_percent || 0
   };
 
   try {

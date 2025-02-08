@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import debounce from 'lodash/debounce';
 import { format } from 'date-fns';
 import { 
@@ -20,8 +19,9 @@ import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
 import { useRBAC } from '@/hooks/useRBAC';
-import { submitBill, getBillsByEmployeeId, getGrievancesByEmployeeId } from '@/services/firestore';
+import { submitBill,submitGrievance, getBillsByEmployeeId, getGrievancesByEmployeeId } from '@/services/firestore';
 import toast from 'react-hot-toast';
+import { ExpenseForm } from './ExpenseForm';
 
 
 const ExpensePage: React.FC = () => {
@@ -37,7 +37,7 @@ const ExpensePage: React.FC = () => {
 
   //state definitions
   const [activeTab, setActiveTab] = useState('submit');
-  const [grievances, setGrievances] = useState<Grievance[]>([]);
+  const [grievances, setGrievances] = useState<GrievanceData[]>([]);
   const [showChatbot, setShowChatbot] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all');
@@ -46,9 +46,11 @@ const ExpensePage: React.FC = () => {
     end: ''
   });
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [grievanceDescription, setGrievanceDescription] = useState('');
 
   // State for new expense submission
   const [newExpense, setNewExpense] = useState({
+    id: '',
     amount: '',
     date: '',
     category: '',
@@ -69,30 +71,36 @@ const ExpensePage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
 
   const fetchExpenses = async () => {
-    try {
-      if (!user?.employeeId) return;
-      
-      const bills = await getBillsByEmployeeId(user.employeeId) as unknown as BillData[];
-      setExpenses(bills.map(bill => ({
-        id: bill.bill_id,
-        date: bill.expense_date.toDate().toISOString(),
-        amount: bill.amount,
-        category: bill.category,
-        vendor: bill.vendor,
-        status: bill.is_manager_approved ? 'approved' : 
-               bill.is_flagged ? 'flagged' : 'pending',
-        createdAt: bill.submission_date.toDate().toISOString()
-      })));
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-    }
-  };
+      try {
+        if (!user?.employeeId) return;
+        
+        const bills = await getBillsByEmployeeId(user.employeeId) as unknown as BillData[];
+        setExpenses(bills.map((bill) => ({
+                        id: bill.bill_id,
+                        date: bill.expense_date.toDate().toISOString(),
+                        amount: bill.amount,
+                        category: bill.category,
+                        vendor: bill.vendor,
+                        createdAt: bill.submission_date.toDate().toISOString(),
+                        description: bill.description,
+                        employee_id: bill.employee_id,
+                        is_flagged: bill.is_flagged,
+                        is_manager_approved: bill.is_manager_approved,
+                        payment_type: bill.payment_type,
+                        submission_date: bill.submission_date,
+                        status: "pending" // Ensure this field is included
+                      })));
+      } catch (error) {
+        console.error('Error fetching expenses:', error);
+        toast.error('Failed to fetch expenses');
+      }
+    };
   
   const fetchGrievances = async () => {
     try {
       if (!user?.employeeId) return;
       
-      const grievances = await getGrievancesByEmployeeId(user.employeeId) as unknown as Grievance[];
+      const grievances = await getGrievancesByEmployeeId(user.employeeId) as unknown as GrievanceData[];
       setGrievances(grievances);
     } catch (error) {
       console.error('Error fetching grievances:', error);
@@ -109,36 +117,7 @@ const ExpensePage: React.FC = () => {
   
 
   // Mock data - replace with actual API calls
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: '1',
-      date: '2024-02-08',
-      amount: 150.00,
-      category: 'Travel',
-      vendor: 'Uber',
-      status: 'pending',
-      createdAt: '2024-02-08T10:00:00Z'
-    },
-    {
-      id: '2',
-      date: '2024-02-07',
-      amount: 75.50,
-      category: 'Meals',
-      vendor: 'Restaurant XYZ',
-      status: 'approved',
-      createdAt: '2024-02-07T15:30:00Z'
-    },
-    {
-      id: '3',
-      date: '2024-02-06',
-      amount: 200.00,
-      category: 'Office Supplies',
-      vendor: 'Staples',
-      status: 'rejected',
-      rejectionReason: 'Missing receipt',
-      createdAt: '2024-02-06T09:15:00Z'
-    }
-  ]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   
 
   // Filter expenses based on search and filters
@@ -147,12 +126,10 @@ const ExpensePage: React.FC = () => {
       expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.category.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || expense.status === statusFilter;
-    
     const matchesDate = !dateRange.start || !dateRange.end || 
       (expense.date >= dateRange.start && expense.date <= dateRange.end);
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesDate;
   });
 
   // Debounced search handler
@@ -188,64 +165,41 @@ const ExpensePage: React.FC = () => {
     setUploadedFiles(prev => [...prev, ...files]);
   };
 
-  // New expense submission handler
-  const handleSubmitExpense = async (e: React.FormEvent) => {
+  const handleSubmitGrievance = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+  
     try {
       if (!user?.employeeId) {
         throw new Error('User not authenticated');
       }
   
-      const billData = {
-        amount: parseFloat(newExpense.amount),
-        category: newExpense.category,
-        employee_id: user.employeeId,
-        expense_date: new Date(newExpense.date),
-        payment_type: newExpense.paymentType,
-        vendor: newExpense.vendor
-      };
+      if (!selectedExpenses.size) {
+        toast.error('Please select an expense to file grievance');
+        return;
+      }
   
-      const billId = await submitBill(
-        newExpense.billNumber,
-        newExpense.vendor,
-        billData
+      await submitGrievance(
+        user.employeeId,
+        Array.from(selectedExpenses)[0], // Using first selected expense
+        grievanceDescription,
+        uploadedFiles.map(file => file.name)
       );
   
-      // Handle file uploads here if needed
-  
       // Reset form
-      setNewExpense({
-        amount: '',
-        date: '',
-        category: '',
-        vendor: '',
-        description: '',
-        billNumber: '',
-        paymentType: '',
-        attachments: []
-      });
+      setSelectedExpenses(new Set());
+      setGrievanceDescription('');
       setUploadedFiles([]);
   
-      // Show success message
-      toast({
-        title: 'Success',
-        description: 'Expense claim submitted successfully',
-        duration: 3000,
-      });
-  
-      // Refresh expenses list
-      fetchExpenses();
+      toast.success('Grievance submitted successfully');
+      fetchGrievances();
     } catch (error) {
-      console.error('Error submitting expense:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to submit expense claim',
-        variant: 'destructive',
-        duration: 3000,
-      });
+      console.error('Error submitting grievance:', error);
+      toast.error('Failed to submit grievance');
     }
   };
+
+  // New expense submission handler
+  
 
   // Chatbot handlers
   const handleSendMessage = () => {
@@ -400,122 +354,7 @@ const ExpensePage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmitExpense} className="space-y-6">
-                    <div 
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                        ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
-                      `}
-                      onDragEnter={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDragOver={handleDrag}
-                      onDrop={handleDrop}
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <Upload className="h-10 w-10 text-gray-400" />
-                        <p className="text-sm text-gray-600">
-                          {dragActive 
-                            ? 'Drop your files here' 
-                            : 'Drag and drop your receipt here, or click to browse'
-                          }
-                        </p>
-                        <input
-                          type="file"
-                          multiple
-                          onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))}
-                          className="hidden"
-                          id="file-upload"
-                        />
-                        <Button 
-                          type="button"
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => document.getElementById('file-upload')?.click()}
-                        >
-                          Browse Files
-                        </Button>
-                      </div>
-                      {uploadedFiles.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {uploadedFiles.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <span className="text-sm">{file.name}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="amount">Amount</Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          placeholder="Enter amount"
-                          value={newExpense.amount}
-                          onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={newExpense.date}
-                          onChange={(e) => setNewExpense(prev => ({ ...prev, date: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select 
-                          value={newExpense.category}
-                          onValueChange={(value) => setNewExpense(prev => ({ ...prev, category: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="travel">Travel</SelectItem>
-                            <SelectItem value="meals">Meals</SelectItem>
-                            <SelectItem value="supplies">Office Supplies</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="vendor">Vendor</Label>
-                        <Input
-                          id="vendor"
-                          placeholder="Enter vendor name"
-                          value={newExpense.vendor}
-                          onChange={(e) => setNewExpense(prev => ({ ...prev, vendor: e.target.value }))}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <textarea
-                        id="description"
-                        className="w-full min-h-[100px] p-3 rounded-md border"
-                        placeholder="Provide additional details about the expense..."
-                        value={newExpense.description}
-                        onChange={(e) => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                      />
-                    </div>
-
-                    <Button type="submit" className="w-full">Submit Claim</Button>
-                  </form>
+                  <ExpenseForm />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -645,7 +484,7 @@ const ExpensePage: React.FC = () => {
                               </td>
                               <td className="px-4 py-3 text-sm">{expense.category}</td>
                               <td className="px-4 py-3 text-sm font-medium">
-                                ${expense.amount.toFixed(2)}
+                              ₹{expense.amount}
                               </td>
                               <td className="px-4 py-3">
                                 <StatusBadge status={expense.status} />
@@ -720,6 +559,9 @@ const ExpensePage: React.FC = () => {
                       <textarea 
                         className="w-full min-h-[150px] p-3 rounded-md border"
                         placeholder="Explain your grievance in detail..."
+                        value={grievanceDescription}
+                        onChange={(e) => setGrievanceDescription(e.target.value)}
+                        required
                       />
                     </div>
 
@@ -764,7 +606,7 @@ const ExpensePage: React.FC = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-
+            
             {/* Enhanced Grievance Status Tab */}
             <TabsContent value="grievance-status">
               <Card>
@@ -776,31 +618,22 @@ const ExpensePage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      {
-                        id: '1',
-                        expenseId: '3',
-                        status: 'pending',
-                        submittedDate: '2024-02-07',
-                        lastUpdate: '2024-02-08',
-                        description: 'Missing receipt appeal - receipt was attached in the original submission'
-                      }
-                    ].map((grievance) => (
-                      <Card key={grievance.id}>
+                    {grievances.map((grievance) => (
+                      <Card key={grievance.grievance_id}>
                         <CardContent className="p-4">
                           <div className="space-y-4">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-medium">Grievance #{grievance.id}</h4>
+                                <h4 className="font-medium">Grievance #{grievance.grievance_id}</h4>
                                 <p className="text-sm text-gray-500">
-                                  Submitted on {format(new Date(grievance.submittedDate), 'MMM dd, yyyy')}
+                                  Submitted on {format(grievance.submission_date.toDate(), 'MMM dd, yyyy')}
                                 </p>
                               </div>
                               <StatusBadge status={grievance.status as ExpenseStatus} />
                             </div>
                             <p className="text-sm">{grievance.description}</p>
                             <div className="flex justify-between items-center text-sm text-gray-500">
-                              <span>Last updated: {format(new Date(grievance.lastUpdate), 'MMM dd, yyyy')}</span>
+                              <span>Bill ID: {grievance.bill_id}</span>
                               <Button variant="link" size="sm">View Details</Button>
                             </div>
                           </div>
