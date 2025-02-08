@@ -9,11 +9,12 @@ export interface BillData {
   employee_id: string;
   expense_date: any; // Firestore Timestamp
   is_flagged: boolean;
-  is_manager_approved: boolean;
+  is_manager_approved: string;
   payment_type: string;
   submission_date: any; // Firestore Timestamp
   vendor: string;
   description?: string;
+  rejection_reason?: string;
 }
 
 export interface Expense {

@@ -39,7 +39,7 @@ export const submitBill = async (
     employee_id: data.employee_id,
     expense_date: Timestamp.fromDate(data.expense_date),
     is_flagged: false,
-    is_manager_approved: false,
+    is_manager_approved: "pending",
     payment_type: data.payment_type,
     submission_date: serverTimestamp(),
     vendor: data.vendor,
