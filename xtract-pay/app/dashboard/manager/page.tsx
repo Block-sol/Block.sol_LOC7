@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search } from 'lucide-react';
 import { BillData } from '@/types';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Bell, ChevronDown, User } from 'lucide-react';
+import { Avatar } from '@/components/ui/avatar';
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -22,6 +25,11 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'flagged'>('all');
+  const notifications = [
+    { id: 1, title: 'Expense approved', message: 'Your travel expense has been approved' },
+    { id: 2, title: 'New policy update', message: 'Please review the updated travel policy' }
+  ];
+
 
   const fetchData = async () => {
     if (!user?.employeeId) return;
@@ -66,10 +74,67 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="container flex h-screen gap-6 w-screen space-y-6">
+    <div className="flex h-screen gap-6 w-screen px-2 space-y-6">
         <Sidebar />
-        <div className="flex flex-col gap-6 w-full">
-      <h1 className="text-3xl font-bold">Manager Dashboard</h1>
+
+        <div className="flex-1 flex flex-col w-screen overflow-hidden">
+        {/* Enhanced Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gray-900">XtractPay {user?.role} Dashboard</h1>
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input 
+                  placeholder="Search anything..." 
+                  className="pl-10 bg-gray-50"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {/* Notifications Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="relative p-2 rounded-full hover:bg-gray-100">
+                    <Bell size={20} />
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  {notifications.map(notification => (
+                    <DropdownMenuItem key={notification.id} className="p-4">
+                      <div>
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-sm text-gray-500">{notification.message}</p>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100">
+                    <Avatar>
+                      <User size={20} />
+                    </Avatar>
+                    <span className="font-medium">{user?.displayName}</span>
+                    <ChevronDown size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </header>
+
+    <div className="flex flex-col gap-6 w-full">
 
       <Tabs defaultValue="analytics">
         <TabsList>
@@ -136,6 +201,7 @@ export default function ManagerDashboard() {
         </TabsContent>
       </Tabs>
       </div>
+    </div>
     </div>
   );
 }
