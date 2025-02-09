@@ -51,22 +51,29 @@ export const ExpenseForm = () => {
     });
 
     const { user } = useAuth();
+   
+        const phone_number = user?.phone_number;
 
   const handleFileUpload = async (file: File) => {
     setIsProcessing(true);
     try {
-      const result = await processReceipt(file);
+      if (!phone_number) {
+        throw new Error('Phone number is required');
+      }
+      const result = await processReceipt(file, phone_number);
+
+      console.log('Receipt processed:', result);
       
       // Map the API response to form fields
       setFormData({
-        amount: result.amount || '',
-        date: result.expense_date || '',
-        category: result.category || '',
-        vendor: result.vendor_name || '',
-        description: result.description || '',
-        billNumber: result.bill_id || '',
+        amount: result.data.amount || '',
+        date: result.data.expense_date || '',
+        category: result.data.category || '',
+        vendor: result.data.vendor_name || '',
+        description: result.data.description || '',
+        billNumber: result.data.bill_id || '',
         paymentType: 'CASH', // Default value
-        gstNo: result.gstno || ''
+        gstNo: result.data.gstno || ''
       });
 
       toast.success('Receipt processed successfully');
@@ -88,7 +95,7 @@ export const ExpenseForm = () => {
                           date: bill.expense_date.toDate().toISOString(),
                           amount: bill.amount,
                           category: bill.category,
-                          vendor: bill.vendor,
+                          vendor: bill.vendor_name,
                           createdAt: bill.submission_date.toDate().toISOString(),
                           description: bill.description,
                           employee_id: bill.employee_id,

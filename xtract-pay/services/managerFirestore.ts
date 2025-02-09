@@ -74,7 +74,7 @@ export const getEmployeeBills = async (employeeIds: string[]) => {
         is_flagged: data.is_flagged,
         payment_type: data.payment_type,
         submission_date: data.submission_date,
-        vendor: data.vendor
+        vendor_name: data.vendor
       } as BillData;
     });
   } catch (error) {

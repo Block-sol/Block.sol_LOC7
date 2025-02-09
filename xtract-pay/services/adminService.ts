@@ -15,6 +15,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { AdminBillData, SpendingControl, BudgetItem, CostOptimization } from '@/types';
+import { openaiService } from './openaiService';
 
 export const adminService = {
   // Real-time Bills Listener
@@ -67,6 +68,29 @@ export const adminService = {
     });
   },
 
+  getTaxInsights: async () => {
+    try {
+      // Fetch all bills
+      const billsRef = collection(db, 'Bills');
+      const billsSnapshot = await getDocs(billsRef);
+      const bills = billsSnapshot.docs.map(doc => {
+        const data = doc.data() as Omit<AdminBillData, 'id'>;
+        return {
+          ...data,
+          id: doc.id
+        };
+      }) as AdminBillData[];
+
+      // Get AI-powered tax recommendations
+      const recommendations = await openaiService.analyzeTaxOpportunities(bills);
+      return recommendations;
+    } catch (error) {
+      console.error('Error getting tax insights:', error);
+      throw error;
+    }
+  },
+
+
   // Budget Management
   getBudgetItems: async (fiscalYear: string) => {
     const budgetRef = collection(db, 'Budgets');
@@ -102,7 +126,7 @@ export const adminService = {
     }) as AdminBillData[];
 
     // Process bills for department analytics
-    const analytics = processDeparmtentAnalytics(bills);
+    const analytics = processDepartmentAnalytics(bills);
     return analytics;
   },
 
@@ -138,24 +162,31 @@ export const adminService = {
     return analyzeTaxCompliance(bills);
   },
 
-  async getCostOptimizations(): Promise<CostOptimization[]> {
-    // Implement cost optimization analysis
-    const billsRef = collection(db, 'Bills');
-    const snapshot = await getDocs(billsRef);
-    const bills = snapshot.docs.map(doc => {
-      const data = doc.data() as Omit<AdminBillData, 'id'>;
-      return {
-        ...data,
-        id: doc.id
-      };
-    }) as AdminBillData[];
+  getCostOptimizations: async () => {
+    try {
+      // Fetch all bills first
+      const billsRef = collection(db, 'Bills');
+      const billsSnapshot = await getDocs(billsRef);
+      const bills = billsSnapshot.docs.map(doc => {
+        const data = doc.data() as Omit<AdminBillData, 'id'>;
+        return {
+          ...data,
+          id: doc.id
+        };
+      }) as AdminBillData[];
 
-    return analyzeCostOptimizations(bills);
+      // Get AI-powered recommendations
+      const recommendations = await openaiService.analyzeCostOptimization(bills);
+      return recommendations;
+    } catch (error) {
+      console.error('Error getting cost optimizations:', error);
+      throw error;
+    }
   }
 };
 
 // Helper Functions
-function processDeparmtentAnalytics(bills: AdminBillData[]) {
+function processDepartmentAnalytics(bills: AdminBillData[]) {
   // Implement department analytics processing
   // Return DepartmentAnalytics object
 }

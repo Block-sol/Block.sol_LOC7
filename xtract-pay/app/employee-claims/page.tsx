@@ -80,7 +80,7 @@ const ExpensePage: React.FC = () => {
                         date: bill.expense_date.toDate().toISOString(),
                         amount: bill.amount,
                         category: bill.category,
-                        vendor: bill.vendor,
+                        vendor: bill.vendor_name,
                         createdAt: bill.submission_date.toDate().toISOString(),
                         description: bill.description,
                         employee_id: bill.employee_id,
@@ -123,8 +123,8 @@ const ExpensePage: React.FC = () => {
   // Filter expenses based on search and filters
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = 
-      expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase());
+      expense?.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense?.category.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDate = !dateRange.start || !dateRange.end || 
       (expense.date >= dateRange.start && expense.date <= dateRange.end);

@@ -16,6 +16,7 @@ import { AdminBillData } from '@/types';
 import { ValidationSummary } from '@/components/admin/validation/ValidationSummary';
 import { SpendingTrendChart } from '@/components/admin/charts/SpendingTrendChart';
 import { DepartmentSpendingChart } from '@/components/admin/charts/DepartmentSpendingChart';
+import { Sidebar } from '@/components/layout/Sidebar';
 
 export default function AdminDashboard() {
     const {
@@ -58,7 +59,8 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
       <div className="flex flex-col">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">

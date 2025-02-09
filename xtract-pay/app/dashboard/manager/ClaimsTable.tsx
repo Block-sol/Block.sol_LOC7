@@ -93,7 +93,7 @@ export const ClaimsTable: React.FC<ClaimsTableProps> = ({ bills, onUpdate }) => 
                   {bill.category}
                 </Badge>
               </TableCell>
-              <TableCell>{bill.vendor}</TableCell>
+              <TableCell>{bill.vendor_name}</TableCell>
               <TableCell>₹{bill.amount.toLocaleString()}</TableCell>
               <TableCell>
                 {bill.is_manager_approved === "approved" ? (

@@ -9,6 +9,7 @@ export interface UserData {
   employeeId?: string;
   createdAt: Date;
   lastLogin: Date;
+  phone_number?: string;
 }
 
 export interface AuthContextType {

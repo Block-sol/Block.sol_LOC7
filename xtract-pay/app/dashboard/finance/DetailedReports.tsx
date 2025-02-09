@@ -50,7 +50,7 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
 
   const filteredBills = bills.filter(bill => {
     const matchesSearch = 
-      bill?.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bill?.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill?.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill?.department?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -307,7 +307,7 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Vendor</span>
-                      <span>{selectedBill.vendor}</span>
+                      <span>{selectedBill.vendor_name}</span>
                     </div>
                   </div>
                 </div>

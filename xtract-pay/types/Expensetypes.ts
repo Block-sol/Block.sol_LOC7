@@ -12,7 +12,7 @@ export interface BillData {
   is_manager_approved: string;
   payment_type: string;
   submission_date: any; // Firestore Timestamp
-  vendor: string;
+  vendor_name: string;
   description?: string;
   rejection_reason?: string;
 }

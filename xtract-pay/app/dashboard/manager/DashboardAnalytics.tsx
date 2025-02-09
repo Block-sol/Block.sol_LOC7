@@ -96,7 +96,7 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ bills })
       employeeData[bill.employee_id] = (employeeData[bill.employee_id] || 0) + Number(bill.amount);
 
       // Vendor analysis
-      vendorData[bill.vendor] = (vendorData[bill.vendor] || 0) + Number(bill.amount);
+      vendorData[bill.vendor_name] = (vendorData[bill.vendor_name] || 0) + Number(bill.amount);
 
       // Submission day analysis
       dayData[day] = (dayData[day] || 0) + 1;
