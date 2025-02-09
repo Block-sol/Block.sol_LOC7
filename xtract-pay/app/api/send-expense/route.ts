@@ -42,24 +42,47 @@ interface ApiResponse {
     error?: string;
 }
 
+// Helper function to format the data for email service
+function formatEmailData(billData: any, documentId: string) {
+    return {
+        manager_email: "nitinbilla10@gmail.com", // You might want to make this configurable
+        expense_report: {
+            amount: parseFloat(billData.amount.toString().replace(/[$,]/g, '')),
+            bill_id: documentId,
+            category: billData.category,
+            created_at: billData.created_at.toDate().toISOString(),
+            description: billData.description || "No caption provided",
+            employee_id: billData.employee_id,
+            expense_date: billData.expense_date.toDate().toISOString(),
+            expense_id: billData.expense_id || "N/A",
+            imageurl: billData.image_url,
+            last_updated: billData.last_updated.toDate().toISOString(),
+            phone_number: billData.phone_number,
+            status: billData.status,
+            submission_date: billData.submission_date.toDate().toISOString(),
+            validation_result: billData.validation_result,
+            vendor_name: billData.vendor_name,
+            violations: billData.violations || []
+        }
+    };
+}
+
 // Helper function to send email notification
-async function sendEmailNotification(billData: any) {
+async function sendEmailNotification(emailData: any) {
     try {
-        const emailApiUrl = 'https://9126-14-139-125-227.ngrok-free.app/send-summary-email';
+        console.log('Sending email notification with data:', JSON.stringify(emailData, null, 2));
         
-        // Log the request body before sending
-        console.log('Sending email notification with data:', billData);
-        
-        const response = await fetch(emailApiUrl, {
+        const response = await fetch('https://9126-14-139-125-227.ngrok-free.app/send-summary-email', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(billData)
+            body: JSON.stringify(emailData)
         });
 
         if (!response.ok) {
-            throw new Error(`Email API responded with status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Email API responded with status: ${response.status}, body: ${errorText}`);
         }
 
         const result = await response.json();
@@ -127,17 +150,10 @@ export async function POST(request: NextRequest) {
         
         await setDoc(billsRef, billToStore);
 
-        // Send email notification with the stored data
+        // Format and send email notification
         try {
-            await sendEmailNotification({
-                ...billToStore,
-                doc_id: documentId,
-                manager_email: "nitinbilla10@gmail.com",
-                created_at: billToStore.created_at.toDate().toISOString(),
-                expense_date: billToStore.expense_date.toDate().toISOString(),
-                submission_date: billToStore.submission_date.toDate().toISOString(),
-                last_updated: billToStore.last_updated.toDate().toISOString()
-            });
+            const emailData = formatEmailData(billToStore, documentId);
+            await sendEmailNotification(emailData);
         } catch (emailError) {
             console.error('Failed to send email notification:', emailError);
             // Continue with the response even if email fails
