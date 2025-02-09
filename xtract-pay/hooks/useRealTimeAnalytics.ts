@@ -1,6 +1,6 @@
 // hooks/useRealTimeAnalytics.ts
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { onSnapshot, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { AdminBillData } from '@/types/admin';
 
@@ -74,11 +74,15 @@ export const useRealTimeAnalytics = () => {
         setBills(billsData);
         // Process bills for analytics
         const processedAnalytics = processAnalytics(billsData);
-        setAnalytics(prev => ({
-          ...prev,
-          ...processedAnalytics
-        }));
+        processedAnalytics.then((data) => {
+          setAnalytics(prev => ({
+            ...prev,
+            ...data
+          }));
+        });
       });
+
+      console.log("analytics!! :",analytics);
 
       // Subscribe to real-time alerts
       const alertsQuery = query(
@@ -136,8 +140,9 @@ export const useRealTimeAnalytics = () => {
       }
     }, []);
   
-    const processAnalytics = (bills: AdminBillData[]) => {
+    const processAnalytics = async (bills: AdminBillData[]) => {
       const departmentSpending: Record<string, number> = {};
+      const employeeDepartments: Record<string, string> = {};
       const categorySpending: Record<string, number> = {};
       const monthlyData: Record<string, { amount: number; count: number }> = {};
   
@@ -149,10 +154,16 @@ export const useRealTimeAnalytics = () => {
       const uniqueEmployeeIds = [...new Set(bills.map(bill => bill.employee_id))];
 
       const employeesQuery = query(
-        collection(db, 'Employees'),
+        collection(db, 'Employee'),
         where('employeeId', 'in', uniqueEmployeeIds)
       );
       const employeeSnapshot = await getDocs(employeesQuery);
+      
+
+      employeeSnapshot.forEach(doc => {
+        const employeeData = doc.data();
+        employeeDepartments[employeeData.employeeId] = employeeData.department;
+      });
   
       bills.forEach(bill => {
         // Update totals
@@ -165,9 +176,15 @@ export const useRealTimeAnalytics = () => {
         if (!bill.is_manager_approved) {
           pendingApproval++;
         }
-  
-        // Update department spending
-        departmentSpending[bill.department] = (departmentSpending[bill.department] || 0) + Number(bill.amount);
+
+        bills.forEach(bill => {
+            const department = employeeDepartments[bill.employee_id];
+            if (department) {
+              departmentSpending[department] = (departmentSpending[department] || 0) + Number(bill.amount);
+            } else {
+              console.warn(`No department found for employee: ${bill.employee_id}`);
+            }
+          });
   
         // Update category spending
         categorySpending[bill.category] = (categorySpending[bill.category] || 0) + Number(bill.amount);
@@ -215,9 +232,6 @@ export const useRealTimeAnalytics = () => {
           console.warn('Department spending or total expenses data is missing');
           return [];
         }
-
-        console.log("department spending!! :",analytics.departmentSpending);
-        console.log("department spending!! :",analytics.totalExpenses);
       
         try {
           // Ensure totalExpenses is not zero to avoid division by zero

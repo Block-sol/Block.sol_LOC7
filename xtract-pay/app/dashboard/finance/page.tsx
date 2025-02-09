@@ -286,20 +286,35 @@ const processValidationData = (bills: AdminBillData[]) => {
   const errors: Record<string, number> = {};
 
   bills.forEach((bill) => {
-    if (!bill?.validation_result?.bill_valid && bill?.validation_result?.reason) {
-      const reasons = bill.validation_result.reason.split(".");
-      reasons.forEach((reason: string) => {
-        const trimmedReason = reason.trim();
-        if (trimmedReason) {
-          errors[trimmedReason] = (errors[trimmedReason] || 0) + 1;
+    if (bill.validation_result) {
+        if (typeof bill.validation_result === "string") {
+            try {
+                bill.validation_result = JSON.parse(bill.validation_result);
+            } catch (error) {
+                console.error("Failed to parse validation result:", error);
+            }
+        } else {     
+
+        const validationResult = bill.validation_result as { bill_valid: boolean; reason: string };
+        if (!validationResult.bill_valid && validationResult.reason) {
+            const reasons = validationResult.reason.split(".");
+            reasons.forEach((reason: string) => {
+              const trimmedReason = reason.trim();
+              if (trimmedReason) {
+                errors[trimmedReason] = (errors[trimmedReason] || 0) + 1;
+              }
+            });
+          }
         }
-      });
+    } else {
+        console.warn("validation_result is undefined or empty");
     }
+
   });
 
   return {
     errors,
-    totalInvalid: bills.filter((b) => !b?.validation_result?.bill_valid).length,
-    totalValid: bills.filter((b) => b?.validation_result?.bill_valid).length,
+    // totalInvalid: bills.filter((b) => !b?.validation_result?.bill_valid).length,
+    // totalValid: bills.filter((b) => b?.validation_result?.bill_valid).length,
   };
 };

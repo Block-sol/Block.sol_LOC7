@@ -63,7 +63,7 @@ export interface ValidationResult {
   }
   
   export interface AdminBillData extends BillData {
-    validation_result: ValidationResult;
+    validation_result: string;
     department: string;
     employee_name: string;
     tax_category?: string;
