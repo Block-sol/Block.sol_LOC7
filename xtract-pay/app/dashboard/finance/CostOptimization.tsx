@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { CostOptimization } from '@/types/admin';
 import { adminService } from '@/services/adminService';
+import { CostInsightsPanel } from '@/components/InsightPanel';
 
 interface CostOptimizationProps {
   departments: string[];
@@ -30,9 +31,25 @@ export const CostOptimizationDashboard: React.FC<CostOptimizationProps> = ({
   departments,
   onImplement
 }) => {
-  const [optimizations, setOptimizations] = useState<CostOptimization[]>([]);
+    const [optimizations, setOptimizations] = useState<CostOptimization[]>([]);
+
+    useEffect(() => {
+      const fetchOptimizations = async () => {
+        const data = await adminService.getCostOptimizations();
+        setOptimizations(data);
+      };
+      fetchOptimizations();
+    }, []);
   const [departmentSavings, setDepartmentSavings] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOptimizations = async () => {
+      const optimizations = await adminService.getCostOptimizations();
+      // Update state with optimizations
+    };
+    fetchOptimizations();
+  }, []);
 
   useEffect(() => {
     const fetchOptimizations = async () => {
@@ -192,55 +209,13 @@ export const CostOptimizationDashboard: React.FC<CostOptimizationProps> = ({
           <CardDescription>Actionable steps to reduce costs</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {optimizations.map((opt, index) => (
-              <div
-                key={index}
-                className="p-4 border rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{opt.category}</h4>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Current Spend: ₹{opt.currentSpend.toLocaleString()}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(opt.priority)}`}>
-                    {opt.priority.toUpperCase()} Priority
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 text-green-600">
-                    <DollarSign className="h-4 w-4" />
-                    // components/admin/CostOptimization.tsx (continued)
-                    <span className="font-medium">
-                      Potential Savings: ₹{opt.potentialSaving.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 space-y-2">
-                    {opt.recommendations.map((rec, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-sm">
-                        <ArrowRight className="h-4 w-4 mt-1 text-blue-500" />
-                        <span>{rec}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => onImplement(opt)}
-                    >
-                      Implement Recommendation
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="space-y-6">
+      {/* Cost Insights Panel */}
+      <CostInsightsPanel insights={optimizations} />
+      
+      {/* Department-specific analysis (if needed) */}
+      {/* ... */}
+    </div>
         </CardContent>
       </Card>
     </div>

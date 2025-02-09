@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TaxInsightsPanel } from '@/components/InsightPanel';
 import {
   Table,
   TableBody,
@@ -46,10 +47,10 @@ interface TaxComplianceProps {
 }
 
 export const TaxCompliancePanel: React.FC<TaxComplianceProps> = ({
-  data,
-  onUpdateControl,
-  onAddControl
-}) => {
+    data,
+    onUpdateControl,
+    onAddControl
+  }) => {
   const [showAddControl, setShowAddControl] = useState(false);
   const [newControl, setNewControl] = useState<{
     type: 'department' | 'category';
@@ -62,6 +63,14 @@ export const TaxCompliancePanel: React.FC<TaxComplianceProps> = ({
     limit: 0,
     period: 'monthly'
   });
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      const insights = await adminService.getTaxInsights();
+      // Update state with insights
+    };
+    fetchInsights();
+  }, []);
 
   const totalPotentialSavings = data.taxInsights.reduce(
     (acc, curr) => acc + curr.potentialSaving,
@@ -135,41 +144,13 @@ export const TaxCompliancePanel: React.FC<TaxComplianceProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {data.taxInsights.map((insight, index) => (
-              <div
-                key={index}
-                className="p-4 border rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{insight.category}</h4>
-                    <p className="text-sm text-gray-500 mt-1">{insight.suggestion}</p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    insight.impact === 'high' ? 'bg-red-50 text-red-600' :
-                    insight.impact === 'medium' ? 'bg-yellow-50 text-yellow-600' :
-                    'bg-green-50 text-green-600'
-                  }`}>
-                    {insight.impact.toUpperCase()} Impact
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 text-green-600">
-                    <TrendingDown className="h-4 w-4" />
-                    <span className="font-medium">
-                      Potential Saving: ₹{insight.potentialSaving.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-sm text-gray-600">
-                    Implementation: {insight.implementation}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="space-y-6">
+      {/* Tax Insights Panel */}
+      <TaxInsightsPanel insights={data.taxInsights} />
+      
+      {/* Rest of your existing controls panel */}
+      {/* ... */}
+    </div>
         </CardContent>
       </Card>
 

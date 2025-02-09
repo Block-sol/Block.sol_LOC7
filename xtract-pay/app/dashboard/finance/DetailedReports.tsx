@@ -144,7 +144,7 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent key={filterOptions.department}>
                 <SelectItem value="all">All Departments</SelectItem>
                 {Array.from(new Set(bills.map(b => b.department))).map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>

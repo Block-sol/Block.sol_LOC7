@@ -33,6 +33,7 @@ export interface ValidationResult {
     suggestion: string;
     impact: 'high' | 'medium' | 'low';
     implementation: string;
+    recommendations: string[];
   }
   
   export interface CostOptimization {

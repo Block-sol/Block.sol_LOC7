@@ -57,7 +57,7 @@ export default function ManagerDashboard() {
 
   const filteredBills = bills.filter(bill => {
     const matchesSearch = 
-      bill.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bill.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill.employee_id.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = 
