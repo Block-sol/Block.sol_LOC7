@@ -1,3 +1,10 @@
 {"timestamp": "2025-02-08T14:09:34.886432", "report_id": "EXP123", "decision": "approved"}
 {"timestamp": "2025-02-08T15:04:24.396331", "report_id": "EXP123", "decision": "approved"}
 {"timestamp": "2025-02-08T16:01:49.049328", "report_id": "EXP123", "decision": "approved"}
+{"timestamp": "2025-02-09T05:24:39.646630", "report_id": "INV-12365-1", "decision": "approved"}
+{"timestamp": "2025-02-09T05:24:45.633292", "report_id": "INV-12365-1", "decision": "rejected"}
+{"timestamp": "2025-02-09T05:58:19.573686", "report_id": "INV-12365-1", "decision": "approved"}
+{"timestamp": "2025-02-09T06:00:53.003249", "report_id": "INV-12365-1", "decision": "approved"}
+{"timestamp": "2025-02-09T06:00:57.796470", "report_id": "INV-12365-1", "decision": "rejected"}
+{"timestamp": "2025-02-09T06:01:01.167924", "report_id": "INV-12365-1", "decision": "approved"}
+{"timestamp": "2025-02-09T06:52:30.594650", "report_id": "INV-12365-1", "decision": "approved"}

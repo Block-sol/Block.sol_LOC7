@@ -1,4 +1,3 @@
-// app/api/check-expense/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import { 
@@ -41,6 +40,35 @@ interface ApiResponse {
     message: string;
     data?: any;
     error?: string;
+}
+
+// Helper function to send email notification
+async function sendEmailNotification(billData: any) {
+    try {
+        const emailApiUrl = 'https://9126-14-139-125-227.ngrok-free.app/send-summary-email';
+        
+        // Log the request body before sending
+        console.log('Sending email notification with data:', billData);
+        
+        const response = await fetch(emailApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(billData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Email API responded with status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('Email notification result:', result);
+        return result;
+    } catch (error) {
+        console.error('Error sending email notification:', error);
+        throw error;
+    }
 }
 
 // POST handler
@@ -87,9 +115,9 @@ export async function POST(request: NextRequest) {
             created_at: Timestamp.now(),
             expense_date: Timestamp.fromDate(new Date(billData.expense_date)),
             submission_date: Timestamp.fromDate(new Date(billData.submission_date)),
-            validation_result: billData.validation_result, // Parse the JSON string
-            amount: parseFloat(billData.amount.replace(/[$,]/g, '')), // Convert amount to number
-            status: 'pending', // Add initial status
+            validation_result: billData.validation_result,
+            amount: parseFloat(billData.amount.replace(/[$,]/g, '')),
+            status: 'pending',
             last_updated: Timestamp.now()
         };
 
@@ -97,7 +125,23 @@ export async function POST(request: NextRequest) {
         const documentId = `${billData.vendor_name.toLowerCase().replace(/\s+/g, '-')}-${billData.bill_id}`;
         const billsRef = doc(db, 'Bills', documentId);
         
-        const newBillDoc = await setDoc(billsRef, billToStore);
+        await setDoc(billsRef, billToStore);
+
+        // Send email notification with the stored data
+        try {
+            await sendEmailNotification({
+                ...billToStore,
+                doc_id: documentId,
+                manager_email: "nitinbilla10@gmail.com",
+                created_at: billToStore.created_at.toDate().toISOString(),
+                expense_date: billToStore.expense_date.toDate().toISOString(),
+                submission_date: billToStore.submission_date.toDate().toISOString(),
+                last_updated: billToStore.last_updated.toDate().toISOString()
+            });
+        } catch (emailError) {
+            console.error('Failed to send email notification:', emailError);
+            // Continue with the response even if email fails
+        }
 
         return NextResponse.json(
             {
