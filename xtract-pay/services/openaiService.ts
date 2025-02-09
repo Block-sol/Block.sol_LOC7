@@ -39,7 +39,7 @@ export const openaiService = {
 
   analyzeCostOptimization: async (bills: AdminBillData[]) => {
     try {
-      const response = await fetch('/api/analyze-costs', {
+      const response = await fetch('/api/analyze-cost', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

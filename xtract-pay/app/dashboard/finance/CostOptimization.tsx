@@ -60,7 +60,7 @@ export const CostOptimizationDashboard: React.FC<CostOptimizationProps> = ({
         // Calculate department-wise potential savings
         const deptSavings: Record<string, number> = {};
         departments.forEach(dept => {
-          const deptOpts = data.filter((opt: { category: string; }) => opt.category.startsWith(dept));
+          const deptOpts = data?.filter((opt: { category: string; }) => opt.category.startsWith(dept));
           deptSavings[dept] = deptOpts.reduce((acc: any, curr: { potentialSaving: any; }) => acc + curr.potentialSaving, 0);
         });
         setDepartmentSavings(deptSavings);
