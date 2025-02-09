@@ -140,11 +140,12 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
             <Select
               value={filterOptions.department}
               onValueChange={(value) => setFilterOptions(prev => ({ ...prev, department: value }))}
+              key={bills.length}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
-              <SelectContent key={filterOptions.department}>
+              <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
                 {Array.from(new Set(bills.map(b => b.department))).map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
@@ -231,11 +232,11 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      bill.validation_result.bill_valid
+                      bill.validation_result?.bill_valid
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {bill.validation_result.bill_valid ? 'Valid' : 'Invalid'}
+                      {bill.validation_result?.bill_valid ? 'Valid' : 'Invalid'}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -318,24 +319,24 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
                 <h3 className="font-medium">Validation Results</h3>
                 <div className="mt-2 p-4 rounded-lg bg-gray-50">
                   <div className="flex items-center gap-2">
-                    {selectedBill.validation_result.bill_valid ? (
+                    {selectedBill.validation_result?.bill_valid ? (
                       <CheckCircle className="h-5 w-5 text-green-500" />
                     ) : (
                       <AlertCircle className="h-5 w-5 text-red-500" />
                     )}
-                    <span className={selectedBill.validation_result.bill_valid 
+                    <span className={selectedBill.validation_result?.bill_valid 
                       ? 'text-green-600' 
                       : 'text-red-600'
                     }>
-                      {selectedBill.validation_result.bill_valid 
+                      {selectedBill.validation_result?.bill_valid 
                         ? 'Bill is valid' 
                         : 'Bill has validation issues'
                       }
                     </span>
                   </div>
-                  {!selectedBill.validation_result.bill_valid && (
+                  {!selectedBill.validation_result?.bill_valid && (
                     <div className="mt-2 text-sm text-gray-600">
-                      {selectedBill.validation_result.reason?.split('.').map((reason, index) => (
+                      {selectedBill.validation_result?.reason?.split('.').map((reason, index) => (
                         reason.trim() && (
                           <div key={index} className="flex items-center gap-2 mt-1">
                             <div className="w-1 h-1 rounded-full bg-red-500" />
@@ -349,7 +350,7 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
               </div>
 
               {/* Audit History */}
-              {selectedBill.audit_history && (
+              {selectedBill?.audit_history && (
                 <div>
                   <h3 className="font-medium">Audit History</h3>
                   <div className="mt-2 space-y-2">
