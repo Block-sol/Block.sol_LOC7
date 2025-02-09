@@ -57,8 +57,8 @@ export const DetailedReports: React.FC<DetailedReportsProps> = ({
     const matchesDepartment = filterOptions.department === 'all' || 
       bill.department === filterOptions.department;
 
-    const matchesStatus = filterOptions.status === 'all' ||
-      (filterOptions.status === 'valid' && bill.validation_result.bill_valid) ||
+    const matchesStatus = filterOptions.status === 'all' || 
+      (filterOptions.status === 'valid' && Object(bill.validation_result.bill_valid)) ||
       (filterOptions.status === 'invalid' && !bill.validation_result.bill_valid);
 
     return matchesSearch && matchesDepartment && matchesStatus;
