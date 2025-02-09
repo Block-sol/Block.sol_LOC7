@@ -487,7 +487,7 @@ const ExpensePage: React.FC = () => {
                               ₹{expense.amount}
                               </td>
                               <td className="px-4 py-3">
-                                <StatusBadge status={expense.status} />
+                                <StatusBadge status={expense.is_manager_approved === 'approved' ? 'approved' :  expense.is_manager_approved === 'rejected' ? "rejected" : "pending" } />
                               </td>
                               <td className="px-4 py-3">
                                 <DropdownMenu>
@@ -537,7 +537,7 @@ const ExpensePage: React.FC = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {expenses
-                            .filter(e => e.status === 'rejected' || e.status === 'flagged')
+                            .filter(e => e.is_manager_approved === 'rejected' || e.is_flagged)
                             .map(expense => (
                               <SelectItem key={expense.id} value={expense.id}>
                                 {expense.vendor} - ${expense.amount} ({format(new Date(expense.date), 'MMM dd, yyyy')})
@@ -546,10 +546,10 @@ const ExpensePage: React.FC = () => {
                         </SelectContent>
                       </Select>
                       {/* Show rejection reason if available */}
-                      {expenses.find(e => e.status === 'rejected')?.rejectionReason && (
+                      {expenses.find(e => e.is_manager_approved === 'rejected')?.rejectionReason && (
                         <div className="mt-2 p-3 bg-red-50 text-red-700 rounded-md text-sm">
                           <p className="font-medium">Rejection Reason:</p>
-                          <p>{expenses.find(e => e.status === 'rejected')?.rejectionReason}</p>
+                          <p>{expenses.find(e => e.is_manager_approved === 'rejected')?.rejectionReason}</p>
                         </div>
                       )}
                     </div>

@@ -27,6 +27,8 @@ export interface Expense {
   description?: string;
   createdAt: string;
   rejectionReason?: string;
+  is_manager_approved: string;
+  is_flagged: boolean;
 }
 
 export interface GrievanceData {
