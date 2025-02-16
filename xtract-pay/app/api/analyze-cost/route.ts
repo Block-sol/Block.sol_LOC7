@@ -1,94 +1,112 @@
-import OpenAI from 'openai';
 import { NextResponse, NextRequest } from 'next/server';
+import OpenAI from 'openai';
+import { CostOptimization } from '@/types/admin';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure your API key is set in environment variables
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
   try {
     const { bills } = await req.json();
 
-    // Prepare data for analysis
-    const billsSummary = bills.map((bill: { amount: number; category: string; vendor: string; expense_date: string; department: string }) => ({
-      amount: bill.amount,
-      category: bill.category,
-      vendor: bill.vendor,
-      date: bill.expense_date,
-      department: bill.department,
-    }));
-
-    // Group by department and category for better analysis
-    const departmentSummary = bills.reduce(
-      (acc: Record<string, { total: number; categories: Record<string, number> }>, bill: { department: string; amount: number; category: string }) => {
-        if (!acc[bill.department]) {
-          acc[bill.department] = { total: 0, categories: {} };
-        }
-        acc[bill.department].total += bill.amount;
-        acc[bill.department].categories[bill.category] = (acc[bill.department].categories[bill.category] || 0) + bill.amount;
-        return acc;
-      },
-      {}
-    );
+    // Group expenses by department and category
+    const groupedExpenses = bills.reduce((acc: any, bill: any) => {
+      const key = `${bill.department}-${bill.category}`;
+      if (!acc[key]) {
+        acc[key] = {
+          total: 0,
+          count: 0,
+          department: bill.department,
+          category: bill.category
+        };
+      }
+      acc[key].total += bill.amount;
+      acc[key].count++;
+      return acc;
+    }, {});
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         {
           role: 'system',
-          content: 'You are a cost optimization expert. Analyze the provided expense data and suggest cost reduction opportunities.',
+          content: `You are a cost optimization expert. Analyze the provided expense data and suggest cost reduction opportunities.
+          Focus on:
+          - Spending patterns by department
+          - Category-wise expense analysis
+          - Vendor consolidation opportunities
+          - Process efficiency improvements
+          Provide specific recommendations with quantifiable savings potential.`,
         },
         {
           role: 'user',
           content: JSON.stringify({
-            task: 'Analyze these expenses and provide cost optimization recommendations',
+            task: 'Analyze these expenses and provide detailed cost optimization recommendations',
             data: {
-              bills: billsSummary,
-              departmentAnalysis: departmentSummary,
+              bills,
+              groupedExpenses
             },
           }),
         },
       ],
       functions: [
         {
-          name: 'provide_cost_recommendations',
+          name: 'provide_cost_optimizations',
           parameters: {
             type: 'object',
             properties: {
-              recommendations: {
+              optimizations: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    category: { type: 'string' },
-                    currentSpend: { type: 'number' },
-                    benchmark: { type: 'number' },
-                    potentialSaving: { type: 'number' },
-                    recommendations: {
+                    category: { 
+                      type: 'string',
+                      description: 'Department or expense category'
+                    },
+                    currentSpend: { 
+                      type: 'number',
+                      description: 'Current annual spending'
+                    },
+                    benchmark: { 
+                      type: 'number',
+                      description: 'Industry benchmark or target spending'
+                    },
+                    potentialSaving: { 
+                      type: 'number',
+                      description: 'Estimated annual savings potential'
+                    },
+                    recommendations: { 
                       type: 'array',
                       items: { type: 'string' },
+                      description: 'List of specific recommendations'
                     },
-                    priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+                    priority: { 
+                      type: 'string', 
+                      enum: ['high', 'medium', 'low'],
+                      description: 'Priority level based on impact and effort'
+                    }
                   },
-                  required: ['category', 'currentSpend', 'benchmark', 'potentialSaving', 'recommendations', 'priority'],
-                },
-              },
+                  required: ['category', 'currentSpend', 'benchmark', 'potentialSaving', 'recommendations', 'priority']
+                }
+              }
             },
-          },
-        },
+            required: ['optimizations']
+          }
+        }
       ],
-      function_call: { name: 'provide_cost_recommendations' },
+      function_call: { name: 'provide_cost_optimizations' }
     });
 
     const functionCall = response.choices[0]?.message?.function_call;
-
-    let recommendations: any = [];
-
-    if (functionCall && functionCall.arguments) {
-      recommendations = JSON.parse(functionCall.arguments)?.recommendations || [];
+    
+    if (functionCall?.arguments) {
+      const { optimizations } = JSON.parse(functionCall.arguments);
+      return NextResponse.json(optimizations);
     }
 
-    return NextResponse.json({ recommendations });
+    return NextResponse.json([]);
   } catch (error) {
     console.error('Error in cost analysis:', error);
     return NextResponse.json({ error: 'Failed to analyze cost optimization' }, { status: 500 });

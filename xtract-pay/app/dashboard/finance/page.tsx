@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics';
 import { BudgetManagement } from './BudgetManagement';
 import { DetailedReports } from './DetailedReports';
-import { TaxCompliancePanel } from './TaxCompliance';
+import TaxCompliancePanel from './TaxCompliance';
 import { CostOptimizationDashboard } from './CostOptimization';
 import { RealTimeIndicator, AlertStream, ActivityFeed } from '@/components/realtime';
 import { Loader2 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { ValidationSummary } from '@/components/admin/validation/ValidationSumma
 import { SpendingTrendChart } from '@/components/admin/charts/SpendingTrendChart';
 import { DepartmentSpendingChart } from '@/components/admin/charts/DepartmentSpendingChart';
 import { Sidebar } from '@/components/layout/Sidebar';
+import AnalyticsDashboard from './AdminAnalytics';
 
 export default function AdminDashboard() {
     const {
@@ -83,87 +84,17 @@ export default function AdminDashboard() {
 
             <TabsContent value="overview">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-6">
-                  {/* Analytics Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Total Expenses */}
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-500">
-                            Total Expenses
-                          </p>
-                          <p className="text-2xl font-bold">
-                            ₹{analytics.totalExpenses.toLocaleString()}
-                          </p>
-                          <div className="flex items-center text-sm">
-                            <span
-                              className={`${
-                                getSpendingTrend() > 0
-                                  ? "text-red-500"
-                                  : "text-green-500"
-                              }`}
-                            >
-                              {getSpendingTrend().toFixed(1)}%
-                            </span>
-                            <span className="text-gray-500 ml-1">
-                              vs last month
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Validation Stats */}
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-500">Valid Bills</p>
-                          <p className="text-2xl font-bold">
-                            {getValidationStats().validPercentage.toFixed(1)}%
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {analytics.validBills} out of{" "}
-                            {analytics.validBills + analytics.invalidBills}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Department Stats */}
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-500">
-                            Top Department
-                          </p>
-                          <p className="text-2xl font-bold">
-                            {getDepartmentRanking()[0]?.department}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            ₹
-                            {getDepartmentRanking()[0]?.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Category Stats */}
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-500">Top Category</p>
-                          <p className="text-2xl font-bold">
-                            {getCategoryInsights()[0]?.category}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            ₹{getCategoryInsights()[0]?.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
+              <div className="md:col-span-3 space-y-6"> {/* Changed to full width */}
+                {/* Remove the old analytics cards as they're now part of AnalyticsDashboard */}
+                
+                {/* Add the new AnalyticsDashboard */}
+                <AnalyticsDashboard 
+                    bills={bills.map(bill => ({ ...bill, vendor: bill.vendor_name || 'Unknown Vendor', amount: Number(bill.amount) }))}
+                    onFlaggedClick={() => {
+                        console.log("Flagged bills:");
+                    }}
+                />
+                    
                    {/* Main Analytics Content */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <SpendingTrendChart 
@@ -182,29 +113,6 @@ export default function AdminDashboard() {
                     />
                     <ValidationSummary data={validationData} />
                   </div>
-                </div>
-
-                {/* Sidebar */}
-                <div className="space-y-6">
-                  {/* Alerts */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Active Alerts</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AlertStream alerts={analytics.alerts} />
-                    </CardContent>
-                  </Card>
-
-                  {/* Activity Feed */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ActivityFeed activities={analytics.recentActivity} />
-                    </CardContent>
-                  </Card>
                 </div>
               </div>
             </TabsContent>
@@ -237,18 +145,7 @@ export default function AdminDashboard() {
 
             <TabsContent value="tax">
               <TaxCompliancePanel
-                data={{
-                  taxInsights: [], // Add your tax insights data
-                  spendingControls: [], // Add your spending controls data
-                }}
-                onUpdateControl={(control: any) => {
-                  // Implement control update functionality
-                  console.log("Updating control:", control);
-                }}
-                onAddControl={(control: any) => {
-                  // Implement add control functionality
-                  console.log("Adding control:", control);
-                }}
+             
               />
             </TabsContent>
 

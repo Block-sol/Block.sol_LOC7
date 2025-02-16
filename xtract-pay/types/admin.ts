@@ -33,7 +33,6 @@ export interface ValidationResult {
     suggestion: string;
     impact: 'high' | 'medium' | 'low';
     implementation: string;
-    recommendations: string[];
   }
   
   export interface CostOptimization {
@@ -43,6 +42,16 @@ export interface ValidationResult {
     potentialSaving: number;
     recommendations: string[];
     priority: 'high' | 'medium' | 'low';
+  }
+
+  export interface SpendingControl {
+    id: string;
+    type: 'department' | 'category';
+    target: string;
+    limit: number;
+    period: 'monthly' | 'quarterly' | 'yearly';
+    currentSpend: number;
+    active: boolean;
   }
   
   export interface DepartmentAnalytics {

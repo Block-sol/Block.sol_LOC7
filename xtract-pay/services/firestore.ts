@@ -7,7 +7,8 @@ import {
   query, 
   where,
   serverTimestamp,
-  Timestamp 
+  Timestamp, 
+  updateDoc
 } from 'firebase/firestore';
 import { BillData, GrievanceData } from '@/types';
 
@@ -52,7 +53,7 @@ export const submitBill = async (
   try {
     // Check if bill already exists
     const billRef = doc(db, 'Bills', documentId);
-    await setDoc(billRef, billData);
+    await updateDoc(billRef, billData);
     return documentId;
   } catch (error) {
     console.error('Error submitting bill:', error);

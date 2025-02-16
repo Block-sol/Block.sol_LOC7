@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             router.replace('/dashboard/manager');
             break;
           case 'admin':
-            router.replace('/dashboard/admin');
+            router.replace('/dashboard/finance');
             break;
           default:
             router.replace('/dashboard');

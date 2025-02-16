@@ -1,16 +1,7 @@
-// components/admin/TaxCompliance.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TaxInsightsPanel } from '@/components/InsightPanel';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   BarChart,
   Bar,
@@ -19,91 +10,150 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line
+  ResponsiveContainer
 } from 'recharts';
-import { TaxInsight, SpendingControl } from '@/types/admin';
-import { adminService } from '@/services/adminService';
 import {
   Receipt,
   ShieldCheck,
-  AlertTriangle,
   TrendingDown,
-  Settings,
-  PlusCircle
+  ArrowUpRight,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface TaxComplianceProps {
-  data: {
-    taxInsights: TaxInsight[];
-    spendingControls: SpendingControl[];
-  };
-  onUpdateControl: (control: SpendingControl) => void;
-  onAddControl: (control: Omit<SpendingControl, 'id'>) => void;
+// Types based on the OpenAI function parameters
+interface TaxInsight {
+  category: string;
+  potentialSaving: number;
+  suggestion: string;
+  impact: 'high' | 'medium' | 'low';
+  implementation: string;
 }
 
-export const TaxCompliancePanel: React.FC<TaxComplianceProps> = ({
-    data,
-    onUpdateControl,
-    onAddControl
-  }) => {
-  const [showAddControl, setShowAddControl] = useState(false);
-  const [newControl, setNewControl] = useState<{
-    type: 'department' | 'category';
-    target: string;
-    limit: number;
-    period: 'monthly' | 'quarterly' | 'yearly';
-  }>({
-    type: 'department',
-    target: '',
-    limit: 0,
-    period: 'monthly'
-  });
+// Mock bills data for testing
+const MOCK_BILLS = [
+  {
+    id: '1',
+    amount: 50000,
+    category: 'Travel',
+    vendor: 'Airlines Co',
+    expense_date: '2024-02-01',
+    department: 'Sales'
+  },
+  {
+    id: '2',
+    amount: 75000,
+    category: 'Equipment',
+    vendor: 'Tech Store',
+    expense_date: '2024-02-05',
+    department: 'IT'
+  }
+];
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      const insights = await adminService.getTaxInsights();
-      // Update state with insights
-    };
-    fetchInsights();
+const TaxCompliancePanel = () => {
+  const [insights, setInsights] = React.useState<TaxInsight[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetchTaxInsights();
   }, []);
 
-  const totalPotentialSavings = data.taxInsights.reduce(
+  const fetchTaxInsights = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/analyze-tax', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bills: MOCK_BILLS }),
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch tax insights');
+      
+      const data = await response.json();
+      setInsights(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPotentialSavings = insights.reduce(
     (acc, curr) => acc + curr.potentialSaving,
     0
   );
 
-  const handleAddControl = () => {
-    onAddControl({
-      ...newControl,
-      currentSpend: 0,
-      active: true
-    });
-    setShowAddControl(false);
-    setNewControl({
-      type: 'department',
-      target: '',
-      limit: 0,
-      period: 'monthly'
-    });
+  const highPriorityCount = insights.filter(
+    insight => insight.impact === 'high'
+  ).length;
+
+  const getImpactColor = (impact: 'high' | 'medium' | 'low') => {
+    const colors = {
+      high: 'bg-red-100 text-red-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      low: 'bg-green-100 text-green-800'
+    };
+    return colors[impact];
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-gray-500">Loading tax insights...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-red-500 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5" />
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Tax Insights Summary */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm text-gray-500">Potential Tax Savings</p>
+                <p className="text-sm text-gray-500">Total Potential Savings</p>
                 <p className="text-2xl font-bold">₹{totalPotentialSavings.toLocaleString()}</p>
               </div>
               <Receipt className="h-8 w-8 text-green-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-center text-sm text-green-600">
+                <TrendingDown className="h-4 w-4 mr-1" />
+                Optimizable expenses identified
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-gray-500">High Priority Actions</p>
+                <p className="text-2xl font-bold">{highPriorityCount}</p>
+              </div>
+              <ShieldCheck className="h-8 w-8 text-blue-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-center text-sm text-blue-600">
+                Requiring immediate attention
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -113,188 +163,99 @@ export const TaxCompliancePanel: React.FC<TaxComplianceProps> = ({
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-gray-500">Tax Compliance Score</p>
-                <p className="text-2xl font-bold">87%</p>
-              </div>
-              <ShieldCheck className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Active Spending Controls</p>
                 <p className="text-2xl font-bold">
-                  {data.spendingControls.filter(c => c.active).length}
+                  {Math.round(((insights.length - highPriorityCount) / Math.max(1, insights.length)) * 100)}%
                 </p>
               </div>
-              <Settings className="h-8 w-8 text-purple-500" />
+              <ArrowUpRight className="h-8 w-8 text-purple-500" />
+            </div>
+            <div className="mt-2">
+              <div className="flex items-center text-sm text-purple-600">
+                Overall compliance rating
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tax Optimization Recommendations */}
+      {/* Insights Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Tax Optimization Opportunities</CardTitle>
+          <CardTitle>Savings Distribution</CardTitle>
+          <CardDescription>Potential savings by category</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={insights}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Potential Saving']}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="potentialSaving" 
+                  name="Potential Savings" 
+                  fill="#10B981"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Insights */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tax Optimization Recommendations</CardTitle>
           <CardDescription>
-            Actionable recommendations to optimize tax savings
+            Actionable steps to improve tax efficiency
           </CardDescription>
         </CardHeader>
         <CardContent>
-        <div className="space-y-6">
-      {/* Tax Insights Panel */}
-      <TaxInsightsPanel insights={data.taxInsights} />
-      
-      {/* Rest of your existing controls panel */}
-      {/* ... */}
-    </div>
-        </CardContent>
-      </Card>
-
-      {/* Spending Controls */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Spending Controls</CardTitle>
-            <CardDescription>Manage department and category spending limits</CardDescription>
-          </div>
-          <Button 
-            onClick={() => setShowAddControl(true)}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Control
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Limit</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Current Spend</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.spendingControls.map((control) => (
-                <TableRow key={control.id}>
-                  <TableCell className="font-medium capitalize">
-                    {control.type}
-                  </TableCell>
-                  <TableCell>{control.target}</TableCell>
-                  <TableCell>₹{control.limit.toLocaleString()}</TableCell>
-                  <TableCell className="capitalize">{control.period}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      ₹{control.currentSpend.toLocaleString()}
-                      {control.currentSpend > control.limit && (
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      control.active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-600'
-                    }`}>
-                      {control.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onUpdateControl({
-                        ...control,
-                        active: !control.active
-                      })}
-                    >
-                      {control.active ? 'Disable' : 'Enable'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Add Control Dialog */}
-      <Dialog open={showAddControl} onOpenChange={setShowAddControl}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Spending Control</DialogTitle>
-          </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Type</label>
-              <Select
-                value={newControl.type}
-                onValueChange={(value) => setNewControl(prev => ({ ...prev, type: value as 'department' | 'category' }))}
+            {insights.map((insight, index) => (
+              <div
+                key={index}
+                className="p-4 border rounded-lg hover:shadow-md transition-shadow"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="department">Department</SelectItem>
-                  <SelectItem value="category">Category</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-medium text-lg">{insight.category}</h4>
+                    <p className="text-gray-600 mt-1">{insight.suggestion}</p>
+                  </div>
+                  <Badge className={getImpactColor(insight.impact)}>
+                    {insight.impact.toUpperCase()} PRIORITY
+                  </Badge>
+                </div>
 
-            <div>
-              <label className="text-sm font-medium">Target</label>
-              <Input
-                value={newControl.target}
-                onChange={(e) => setNewControl(prev => ({ ...prev, target: e.target.value }))}
-                placeholder={`Enter ${newControl.type} name`}
-              />
-            </div>
+                <div className="flex items-center gap-2 text-green-600 mb-4">
+                  <Receipt className="h-5 w-5" />
+                  <span className="font-medium">
+                    Potential Saving: ₹{insight.potentialSaving.toLocaleString()}
+                  </span>
+                </div>
 
-            <div>
-              <label className="text-sm font-medium">Limit</label>
-              <Input
-                type="number"
-                value={newControl.limit}
-                onChange={(e) => setNewControl(prev => ({ ...prev, limit: parseFloat(e.target.value) }))}
-                placeholder="Enter amount limit"
-              />
-            </div>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h5 className="font-medium mb-2">Implementation Steps</h5>
+                  <p className="text-sm text-gray-600">{insight.implementation}</p>
+                </div>
 
-            <div>
-              <label className="text-sm font-medium">Period</label>
-              <Select
-                value={newControl.period}
-                onValueChange={(value) => setNewControl(prev => ({ ...prev, period: value as 'monthly' | 'quarterly' | 'yearly' }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddControl(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddControl}>
-                Add Control
-              </Button>
-            </div>
+                <div className="mt-4 flex justify-end">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Implement
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
+export default TaxCompliancePanel;

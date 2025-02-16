@@ -1,74 +1,88 @@
 import { NextResponse, NextRequest } from 'next/server';
 import OpenAI from 'openai';
+import { TaxInsight } from '@/types/admin';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure API key is set
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
   try {
     const { bills } = await req.json();
 
-    // Prepare data for analysis
-    const billsSummary = bills.map((bill: { amount: number; category: string; vendor: string; expense_date: string; department: string }) => ({
-      amount: bill.amount,
-      category: bill.category,
-      vendor: bill.vendor,
-      date: bill.expense_date,
-      department: bill.department,
-    }));
-
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         {
           role: 'system',
-          content: 'You are a tax optimization expert. Analyze the provided expense data and suggest tax saving opportunities.',
+          content: `You are a tax optimization expert. Analyze the provided expense data and suggest tax saving opportunities. 
+          Focus on these aspects:
+          - Tax deductions and credits
+          - Expense categorization
+          - Compliance optimization
+          - Documentation requirements
+          Return specific, actionable recommendations with estimated savings.`,
         },
         {
           role: 'user',
           content: JSON.stringify({
-            task: 'Analyze these expenses and provide tax saving recommendations',
-            data: billsSummary,
+            task: 'Analyze these expenses and provide detailed tax saving recommendations',
+            data: bills,
           }),
         },
       ],
       functions: [
         {
-          name: 'provide_tax_recommendations',
+          name: 'provide_tax_insights',
           parameters: {
             type: 'object',
             properties: {
-              recommendations: {
+              insights: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    category: { type: 'string' },
-                    potentialSaving: { type: 'number' },
-                    suggestion: { type: 'string' },
-                    impact: { type: 'string', enum: ['high', 'medium', 'low'] },
-                    implementation: { type: 'string' },
+                    category: { 
+                      type: 'string',
+                      description: 'Category of tax optimization (e.g., "Travel Expenses", "Equipment Depreciation")'
+                    },
+                    potentialSaving: { 
+                      type: 'number',
+                      description: 'Estimated annual savings in rupees'
+                    },
+                    suggestion: { 
+                      type: 'string',
+                      description: 'Clear, actionable suggestion for tax optimization'
+                    },
+                    impact: { 
+                      type: 'string', 
+                      enum: ['high', 'medium', 'low'],
+                      description: 'Priority level of the suggestion'
+                    },
+                    implementation: { 
+                      type: 'string',
+                      description: 'Step-by-step implementation guidance'
+                    }
                   },
-                  required: ['category', 'potentialSaving', 'suggestion', 'impact', 'implementation'],
-                },
-              },
+                  required: ['category', 'potentialSaving', 'suggestion', 'impact', 'implementation']
+                }
+              }
             },
-          },
-        },
+            required: ['insights']
+          }
+        }
       ],
-      function_call: { name: 'provide_tax_recommendations' },
+      function_call: { name: 'provide_tax_insights' }
     });
 
     const functionCall = response.choices[0]?.message?.function_call;
-
-    let recommendations: any = [];
-
-    if (functionCall && functionCall.arguments) {
-      recommendations = JSON.parse(functionCall.arguments)?.recommendations || [];
+    
+    if (functionCall?.arguments) {
+      const { insights } = JSON.parse(functionCall.arguments);
+      return NextResponse.json(insights);
     }
 
-    return NextResponse.json({ recommendations });
+    return NextResponse.json([]);
   } catch (error) {
     console.error('Error in tax analysis:', error);
     return NextResponse.json({ error: 'Failed to analyze tax opportunities' }, { status: 500 });

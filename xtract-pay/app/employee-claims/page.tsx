@@ -80,7 +80,7 @@ const ExpensePage: React.FC = () => {
                         date: bill.expense_date.toDate().toISOString(),
                         amount: bill.amount,
                         category: bill.category,
-                        vendor: bill.vendor_name,
+                        vendor_name: bill.vendor_name,
                         createdAt: bill.submission_date.toDate().toISOString(),
                         description: bill.description,
                         employee_id: bill.employee_id,
@@ -123,7 +123,7 @@ const ExpensePage: React.FC = () => {
   // Filter expenses based on search and filters
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = 
-      expense?.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense?.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense?.category.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDate = !dateRange.start || !dateRange.end || 
@@ -474,7 +474,7 @@ const ExpensePage: React.FC = () => {
                               </td>
                               <td className="px-4 py-3">
                                 <div>
-                                  <p className="font-medium">{expense.vendor}</p>
+                                  <p className="font-medium">{expense.vendor_name}</p>
                                   {expense.description && (
                                     <p className="text-sm text-gray-500 truncate max-w-xs">
                                       {expense.description}
@@ -540,7 +540,7 @@ const ExpensePage: React.FC = () => {
                             .filter(e => e.is_manager_approved === 'rejected' || e.is_flagged)
                             .map(expense => (
                               <SelectItem key={expense.id} value={expense.id}>
-                                {expense.vendor} - ${expense.amount} ({format(new Date(expense.date), 'MMM dd, yyyy')})
+                                {expense.vendor_name} - ${expense.amount} ({format(new Date(expense.date), 'MMM dd, yyyy')})
                               </SelectItem>
                             ))}
                         </SelectContent>

@@ -22,7 +22,7 @@ export interface Expense {
   date: string;
   amount: string;
   category: string;
-  vendor: string;
+  vendor_name: string;
   status: ExpenseStatus;
   description?: string;
   createdAt: string;

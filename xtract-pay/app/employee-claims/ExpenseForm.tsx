@@ -16,7 +16,7 @@ interface ExpenseFormState {
   amount: string;
   date: string;
   category: string;
-  vendor: string;
+  vendor_name: string;
   description: string;
   billNumber: string;
   paymentType: string;
@@ -29,7 +29,7 @@ export const ExpenseForm = () => {
     amount: '',
     date: '',
     category: '',
-    vendor: '',
+    vendor_name: '',
     description: '',
     billNumber: '',
     paymentType: '',
@@ -43,7 +43,7 @@ export const ExpenseForm = () => {
       amount: '',
       date: '',
       category: '',
-      vendor: '',
+      vendor_name: '',
       description: '',
       billNumber: '', // Added this field
       paymentType: '', // Added this field
@@ -69,7 +69,7 @@ export const ExpenseForm = () => {
         amount: result.data.amount || '',
         date: result.data.expense_date || '',
         category: result.data.category || '',
-        vendor: result.data.vendor_name || '',
+        vendor_name: result.data.vendor_name || '',
         description: result.data.description || '',
         billNumber: result.data.bill_id || '',
         paymentType: 'CASH', // Default value
@@ -95,7 +95,7 @@ export const ExpenseForm = () => {
                           date: bill.expense_date.toDate().toISOString(),
                           amount: bill.amount,
                           category: bill.category,
-                          vendor: bill.vendor_name,
+                          vendor_name: bill.vendor_name,
                           createdAt: bill.submission_date.toDate().toISOString(),
                           description: bill.description,
                           employee_id: bill.employee_id,
@@ -134,7 +134,7 @@ export const ExpenseForm = () => {
           throw new Error('User not authenticated');
         }
     
-        if (!formData.billNumber || !formData.vendor) {
+        if (!formData.billNumber || !formData.vendor_name) {
           toast.error('Bill number and vendor are required');
           return;
         }
@@ -145,13 +145,13 @@ export const ExpenseForm = () => {
           employee_id: user.employeeId,
           expense_date: new Date(formData.date),
           payment_type: formData.paymentType,
-          vendor: formData.vendor,
+          vendor: formData.vendor_name,
           description: formData.description
         };
     
         await submitBill(
           formData.billNumber,
-          formData.vendor,
+          formData.vendor_name,
           billData
         );
     
@@ -160,7 +160,7 @@ export const ExpenseForm = () => {
                   amount: '',
                   date: '',
                   category: '',
-                  vendor: '',
+                  vendor_name: '',
                   description: '',
                   billNumber: '',
                   paymentType: '',
@@ -273,7 +273,7 @@ export const ExpenseForm = () => {
           <Label htmlFor="vendor">Vendor</Label>
           <Input
             id="vendor"
-            value={formData.vendor}
+            value={formData.vendor_name}
             onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
             disabled={true}
             className="bg-gray-50"

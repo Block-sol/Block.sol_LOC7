@@ -1,3 +1,4 @@
+// app/api/check-expense/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import { 
@@ -18,7 +19,7 @@ interface BillItems {
 
 interface BillData {
     vendor_name: string;
-    amount: string | number;
+    amount: string;
     category: string;
     expense_date: string;
     submission_date: string;
@@ -32,7 +33,7 @@ interface BillData {
     employee_id: string;
     violations: string[];
     validation_result: string;
-    imageurl: string; // Updated to match the expected field name
+    image_url: string;
 }
 
 interface ApiResponse {
@@ -42,77 +43,11 @@ interface ApiResponse {
     error?: string;
 }
 
-// Helper function to safely parse amount
-function parseAmount(amount: string | number): number {
-    if (typeof amount === 'number') {
-        return amount;
-    }
-    if (typeof amount === 'string') {
-        // Remove currency symbols, commas and spaces
-        const cleanAmount = amount.replace(/[$,\s]/g, '');
-        return parseFloat(cleanAmount) || 0;
-    }
-    return 0;
-}
-
-// Helper function to format the data for email service
-function formatEmailData(billData: any, documentId: string) {
-    return {
-        manager_email: "nitinbilla10@gmail.com", // You might want to make this configurable
-        expense_report: {
-            amount: parseAmount(billData.amount),
-            bill_id: documentId,
-            category: billData.category,
-            created_at: billData.created_at.toDate().toISOString(),
-            description: billData.description || "No caption provided",
-            employee_id: billData.employee_id,
-            expense_date: billData.expense_date.toDate().toISOString(),
-            expense_id: billData.expense_id || "N/A",
-            imageurl: billData.imageurl, // Updated to use the correct field name
-            last_updated: billData.last_updated.toDate().toISOString(),
-            phone_number: billData.phone_number,
-            status: billData.status,
-            submission_date: billData.submission_date.toDate().toISOString(),
-            validation_result: billData.validation_result,
-            vendor_name: billData.vendor_name,
-            violations: billData.violations || []
-        }
-    };
-}
-
-// Helper function to send email notification
-async function sendEmailNotification(emailData: any) {
-    try {
-        console.log('Sending email notification with data:', JSON.stringify(emailData, null, 2));
-        
-        const response = await fetch('https://9126-14-139-125-227.ngrok-free.app/send-summary-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(emailData)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Email API responded with status: ${response.status}, body: ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log('Email notification result:', result);
-        return result;
-    } catch (error) {
-        console.error('Error sending email notification:', error);
-        throw error;
-    }
-}
-
 // POST handler
 export async function POST(request: NextRequest) {
     try {
-        const { expense_report: billData } = await request.json();
-        
-        console.log('Received bill data:', billData);
+        // Parse request body
+        const billData: BillData = await request.json();
 
         // Validate required fields
         if (!billData.phone_number) {
@@ -125,21 +60,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check for required imageurl
-        if (!billData.imageurl) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'Image URL is required'
-                },
-                { status: 400 }
-            );
-        }
-
         // Find employee by phone number
         const employeesRef = collection(db, 'Employee');
         const q = query(employeesRef, where('phone_number', '==', billData.phone_number));
         const querySnapshot = await getDocs(q);
+        console.log('Query snapshot:', querySnapshot);
 
         if (querySnapshot.empty) {
             return NextResponse.json(
@@ -162,27 +87,17 @@ export async function POST(request: NextRequest) {
             created_at: Timestamp.now(),
             expense_date: Timestamp.fromDate(new Date(billData.expense_date)),
             submission_date: Timestamp.fromDate(new Date(billData.submission_date)),
-            validation_result: billData.validation_result,
-            amount: parseAmount(billData.amount),
-            status: 'pending',
-            last_updated: Timestamp.now(),
-            imageurl: billData.imageurl // Ensure imageurl is included
+            validation_result: billData.validation_result, // Parse the JSON string
+            amount: parseFloat(billData.amount.replace(/[$,]/g, '')), // Convert amount to number
+            status: 'pending', // Add initial status
+            last_updated: Timestamp.now()
         };
 
         // Add to Bills collection
         const documentId = `${billData.vendor_name.toLowerCase().replace(/\s+/g, '-')}-${billData.bill_id}`;
         const billsRef = doc(db, 'Bills', documentId);
         
-        await setDoc(billsRef, billToStore);
-
-        // Format and send email notification
-        try {
-            const emailData = formatEmailData(billToStore, documentId);
-            await sendEmailNotification(emailData);
-        } catch (emailError) {
-            console.error('Failed to send email notification:', emailError);
-            // Continue with the response even if email fails
-        }
+        const newBillDoc = await setDoc(billsRef, billToStore);
 
         return NextResponse.json(
             {
